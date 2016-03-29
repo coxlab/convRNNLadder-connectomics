@@ -21,6 +21,11 @@ def initialize_model():
 
     model = Graph()
 
+    # initialize hidden states
+    for l in range(n_modules):
+        model.add_input(name='H_l%d_t-1' % l, input_shape=(stack_sizes[l], 1024 // 2**(l+1), 1024 // 2**(l+1)))
+        model.add_input(name='C_l%d_t-1' % l, input_shape=(stack_sizes[l], 1024 // 2**(l+1), 1024 // 2**(l+1)))
+
     for t in range(nt_in):
         model.add_input(name='input_t%d' % t, input_shape=(1, 1024, 1024))
 
@@ -30,7 +35,7 @@ def initialize_model():
             shared_layer = None
         else:
             trainable = False
-            shared_layer = model.node[name='conv0_l-1_t0']
+            shared_layer = model.nodes['conv0_l-1_t0']
         layer = Convolution2D(stack_sizes[0], 5, 5, border_mode='same', activation='relu', trainable=trainable, shared_layer=shared_layer, subsample=(2,2))
         model.add_node(layer, name='conv0_l-1_t%d' % t, input='input_t%d' % t)
 
@@ -41,47 +46,59 @@ def initialize_model():
                 shared_layers = [None for _ in range(4)]
             else:
                 trainable = False
-                shared_layers = ['conv%d_l%d_t0' % (i, l) for i in range(4)]
+                shared_layers = [model.nodes['conv%d_l%d_t0' % (i, l)] for i in range(4)]
 
             if l==0:
                 module_input = 'conv0_l-1_t%d' % t
+                module_input_upchannel = 'conv0_l-1_t%d' % t
             else:
                 module_input = 'H_l%d_t%d' % (l-1, t)
+                module_input_upchannel = 'Hupchannel_l%d_t%d' % (l-1, t)
+                if t == 0:
+                    shared_l = None
+                else:
+                    shared_l = model.nodes['Hupchannel_l%d_t0' % (l-1)]
+                layer = Convolution2D(stack_sizes[l], 3, 3, border_mode='same', activation='relu', trainable=trainable, shared_layer=shared_l)
+                model.add_node(layer, name='Hupchannel_l%d_t%d' % (l-1, t), input=module_input)
 
 
             layer = Convolution2D(stack_sizes[l], 3, 3, border_mode='same', activation='relu', trainable=trainable, shared_layer=shared_layers[0])
             model.add_node(layer, name=layer_names[0], input=module_input)
             layer = Convolution2D(stack_sizes[l], 3, 3, border_mode='same', activation='relu', trainable=trainable, shared_layer=shared_layers[1])
             model.add_node(layer, name=layer_names[1], input=layer_names[0])
-            model.add_node(Activation('linear'), name='res0_l%d_t%d' % (l, t), inputs=[module_input, layer_names[1]], merge_mode='sum')
+            model.add_node(Activation('linear'), name='res0_l%d_t%d' % (l, t), inputs=[module_input_upchannel, layer_names[1]], merge_mode='sum')
 
             layer = Convolution2D(stack_sizes[l], 3, 3, border_mode='same', activation='relu', trainable=trainable, shared_layer=shared_layers[2])
             model.add_node(layer, name=layer_names[2], input='res0_l%d_t%d' % (l, t))
             layer = Convolution2D(stack_sizes[l], 3, 3, border_mode='same', activation='relu', trainable=trainable, shared_layer=shared_layers[3])
             model.add_node(layer, name=layer_names[3], input=layer_names[2])
-            model.add_node(Activation('linear'), name='res1_l%d_t%d' % (l, t), inputs=['res0_l%d_t%d' % (l, t), layer_names[3]], merge_mode='sum')
+            if l > 0:
+                model.add_node(AveragePooling2D(), name='res1_l%d_t%d' % (l, t), inputs=['res0_l%d_t%d' % (l, t), layer_names[3]], merge_mode='sum')
+            else:
+                model.add_node(Activation('linear'), name='res1_l%d_t%d' % (l, t), inputs=['res0_l%d_t%d' % (l, t), layer_names[3]], merge_mode='sum')
+
 
             if t==0:
                 shared_layers = [None for _ in range(4)]
             else:
-                shared_layers = ['I_l%d_t0' % l, 'F_l%d_t0' % l, 'O_l%d_t0' % l, 'C1_l%d_t0' % l ]
+                shared_layers = [model.nodes['I_l%d_t0' % l], model.nodes['F_l%d_t0' % l], model.nodes['O_l%d_t0' % l], model.nodes['C1_l%d_t0' % l] ]
             if l==0:
                 subsample = (1,1)
             else:
                 subsample = (2,2)
 
-            layer = Convolution2D(stack_sizes[l], 3, 3, border_mode='same', activation='hard_sigmoid', trainable=trainable, shared_layer=shared_layer[0], subsample=subsample)
+            layer = Convolution2D(stack_sizes[l], 3, 3, border_mode='same', activation='hard_sigmoid', trainable=trainable, shared_layer=shared_layers[0])
             model.add_node(layer, name='I_l%d_t%d' % (l, t), inputs=['res1_l%d_t%d' % (l, t), 'H_l%d_t%d' % (l, t-1)], merge_mode='concat', concat_axis=-3)
-            layer = Convolution2D(stack_sizes[l], 3, 3, border_mode='same', activation='hard_sigmoid', trainable=trainable, shared_layer=shared_layer[1], subsample=subsample)
+            layer = Convolution2D(stack_sizes[l], 3, 3, border_mode='same', activation='hard_sigmoid', trainable=trainable, shared_layer=shared_layers[1])
             model.add_node(layer, name='F_l%d_t%d' % (l, t), inputs=['res1_l%d_t%d' % (l, t), 'H_l%d_t%d' % (l, t-1)], merge_mode='concat', concat_axis=-3)
-            layer = Convolution2D(stack_sizes[l], 3, 3, border_mode='same', activation='hard_sigmoid', trainable=trainable, shared_layer=shared_layer[2], subsample=subsample)
+            layer = Convolution2D(stack_sizes[l], 3, 3, border_mode='same', activation='hard_sigmoid', trainable=trainable, shared_layer=shared_layers[2])
             model.add_node(layer, name='O_l%d_t%d' % (l, t), inputs=['res1_l%d_t%d' % (l, t), 'H_l%d_t%d' % (l, t-1)], merge_mode='concat', concat_axis=-3)
 
-            layer = Convolution2D(stack_sizes[l], 3, 3, border_mode='same', activation='tanh', trainable=trainable, shared_layer==shared_layer[3], subsample=subsample)
+            layer = Convolution2D(stack_sizes[l], 3, 3, border_mode='same', activation='tanh', trainable=trainable, shared_layer=shared_layers[3])
             model.add_node(layer, name='C1_l%d_t%d' % (l, t), inputs=['res1_l%d_t%d' % (l, t), 'H_l%d_t%d' % (l, t-1)], merge_mode='concat', concat_axis=-3)
 
             model.add_node(Activation('linear'), name='C2_l%d_t%d' % (l, t), inputs=['I_l%d_t%d' % (l, t), 'C1_l%d_t%d' % (l, t)], merge_mode='mul')
-            model.add_node(Activation('linear'), name='C3_l%d_t%d' % (l, t), inputs=['F_l%d_t%d' % (l, t), 'C_l%d_t%d' % (i, t-1)], merge_mode='mul')
+            model.add_node(Activation('linear'), name='C3_l%d_t%d' % (l, t), inputs=['F_l%d_t%d' % (l, t), 'C_l%d_t%d' % (l, t-1)], merge_mode='mul')
             model.add_node(Activation('linear'), name='C_l%d_t%d' % (l, t), inputs=['C3_l%d_t%d' % (l, t), 'C2_l%d_t%d' % (l, t)], merge_mode='sum')
             model.add_node(Activation('tanh'), name='Ct_l%d_t%d' % (l, t), input='C_l%d_t%d' % (l, t))
 
@@ -100,19 +117,20 @@ def initialize_model():
             # layer_f = Convolution2D(stack_sizes[l], R_filt_sizes[i], R_filt_sizes[i], border_mode='same', activation='hard_sigmoid', trainable=trainable, shared_layer=shared_layer_f
 
         if t in t_predict:
-            for l in range(n_modules, 0, -1):
+            for l in range(n_modules-1, -1, -1):
                 layer_names = ['deconv%d_l%d_t%d' % (i, l, t) for i in range(4)]
                 if t == t_predict[0]:
                     trainable = True
                     shared_layers = [None for _ in range(4)]
                 else:
                     trainable = False
-                    shared_layers = ['deconv%d_l%d_t%d' % (i, l, t_predict[0]) for i in range(4)]
+                    shared_layers = [model.nodes['deconv%d_l%d_t%d' % (i, l, t_predict[0])] for i in range(4)]
 
 
                 if l==n_modules-1:
                     module_input = 'Hup_l%d_t%d' % (l, t)
                 else:
+                    module_input = 'comb_l%d_t%d' % (l, t)
 
 
                 model.add_node(UpSampling2D(), name='Hup_l%d_t%d' % (l, t), input='H_l%d_t%d' % (l, t))
@@ -123,7 +141,7 @@ def initialize_model():
                         shared_l = None
                         tr = True
                     else:
-                        shared_l = 'comb_l%d_t%d' % (l, t_predict[0])
+                        shared_l = model.nodes['comb_l%d_t%d' % (l, t_predict[0])]
                         tr = False
                     layer = Convolution2D(stack_sizes[l], 3, 3, border_mode='same', activation='relu', trainable=tr, shared_layer=shared_l)
                     model.add_node(layer, name='comb_l%d_t%d' % (l, t), inputs=['Hup_l%d_t%d' % (l, t), 'deres1_l%d_t%d' % (l+1, t), 'prod_l%d_t%d' % (l, t)])
@@ -153,7 +171,7 @@ def train():
     model = initialize_model()
     loss = {}
     for t in t_predict:
-        loss[t] = 'mae'
+        loss['output_t%d' % t] = 'mae'
 
     print 'Compiling...'
     model.compile(loss=loss, optimizer='adam')
@@ -166,17 +184,18 @@ def train():
 
     data = {}
     for t in range(nt_in):
-        data['input_t%d' t] = np.zeros((n - nt_in - n_val + 1, 1, 1024, 1024)).astype(np.float32)
-        data['input_t%d' t][:, 0, :-1, :] = X[t:n-nt_in+1-n_val]
-        data['input_t%d' t][:, 0, -1] = data['input_t%d' t][:, 0, -2]
+        data['input_t%d' % t] = np.zeros((n - nt_in - n_val + 1, 1, 1024, 1024)).astype(np.float32)
+        data['input_t%d' % t][:, 0, :-1, :] = X[t:n-nt_in+1-n_val]
+        data['input_t%d' % t][:, 0, -1] = data['input_t%d' % t][:, 0, -2]
 
     for l in range(n_modules):
-        data['H_l%d_t0' % l] = np.zeros((n, stack_sizes[l], 1024 // l, 1024 // l))
+        data['H_l%d_t-1' % l] = np.zeros((n, stack_sizes[l], 1024 // 2**(l+1), 1024 // 2**(l+1)))
+        data['C_l%d_t-1' % l] = np.zeros((n, stack_sizes[l], 1024 // 2**(l+1), 1024 // 2**(l+1)))
 
     for t in t_predict:
         data['output_t%d' % t] = np.zeros((n - nt_in - n_val + 1, 1, 1024, 1024)).astype(np.float32)
-        data['output_t%d' t][:, 0, :-1, :] = y[t:n-nt_in+1-n_val]
-        data['output_t%d' t][:, 0, -1] = data['output_t%d' t][:, 0, -2]
+        data['output_t%d' % t][:, 0, :-1, :] = y[t:n-nt_in+1-n_val]
+        data['output_t%d' % t][:, 0, -1] = data['output_t%d' % t][:, 0, -2]
 
     model.fit(inputs, batch_size=batch_size, nb_epoch=nb_epoch)
 
