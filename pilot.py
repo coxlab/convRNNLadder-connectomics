@@ -4,6 +4,8 @@ sys.path.append(keras_dir)
 from keras.models import *
 from keras.layers.core import *
 from keras.layers.convolutional import *
+from keras.optimizers import *
+from scipy.io import savemat
 
 import h5py
 
@@ -12,10 +14,11 @@ data_dir = '/home/thouis/ForBill/'
 n_modules = 2
 nt_in = 5
 t_predict = [4]
-stack_sizes = {-1: 1, 0: 32, 1: 64}
-batch_size = 5
-nb_epoch = 1
-
+stack_sizes = {-1: 1, 0: 16, 1: 32}
+batch_size = 4
+nb_epoch = 400
+n_val = 20
+input_size = 256
 
 def initialize_model():
 
@@ -23,11 +26,11 @@ def initialize_model():
 
     # initialize hidden states
     for l in range(n_modules):
-        model.add_input(name='H_l%d_t-1' % l, input_shape=(stack_sizes[l], 1024 // 2**(l+1), 1024 // 2**(l+1)))
-        model.add_input(name='C_l%d_t-1' % l, input_shape=(stack_sizes[l], 1024 // 2**(l+1), 1024 // 2**(l+1)))
+        model.add_input(name='H_l%d_t-1' % l, input_shape=(stack_sizes[l], input_size // 2**(l+1), input_size // 2**(l+1)))
+        model.add_input(name='C_l%d_t-1' % l, input_shape=(stack_sizes[l], input_size // 2**(l+1), input_size // 2**(l+1)))
 
     for t in range(nt_in):
-        model.add_input(name='input_t%d' % t, input_shape=(1, 1024, 1024))
+        model.add_input(name='input_t%d' % t, input_shape=(1, input_size, input_size))
 
         # add first conv layer
         if t == 0:
@@ -35,9 +38,10 @@ def initialize_model():
             shared_layer = None
         else:
             trainable = False
-            shared_layer = model.nodes['conv0_l-1_t0']
-        layer = Convolution2D(stack_sizes[0], 5, 5, border_mode='same', activation='relu', trainable=trainable, shared_layer=shared_layer, subsample=(2,2))
-        model.add_node(layer, name='conv0_l-1_t%d' % t, input='input_t%d' % t)
+            shared_layer = model.nodes['conv0pre_l-1_t0']
+        layer = Convolution2D(stack_sizes[0], 5, 5, border_mode='same', activation='relu', trainable=trainable, shared_layer=shared_layer)
+        model.add_node(layer, name='conv0pre_l-1_t%d' % t, input='input_t%d' % t)
+        model.add_node(AveragePooling2D(), name='conv0_l-1_t%d' % t, input='conv0pre_l-1_t%d' % t)
 
         for l in range(n_modules):
             layer_names = ['conv%d_l%d_t%d' % (i, l, t) for i in range(4)]
@@ -82,10 +86,6 @@ def initialize_model():
                 shared_layers = [None for _ in range(4)]
             else:
                 shared_layers = [model.nodes['I_l%d_t0' % l], model.nodes['F_l%d_t0' % l], model.nodes['O_l%d_t0' % l], model.nodes['C1_l%d_t0' % l] ]
-            if l==0:
-                subsample = (1,1)
-            else:
-                subsample = (2,2)
 
             layer = Convolution2D(stack_sizes[l], 3, 3, border_mode='same', activation='hard_sigmoid', trainable=trainable, shared_layer=shared_layers[0])
             model.add_node(layer, name='I_l%d_t%d' % (l, t), inputs=['res1_l%d_t%d' % (l, t), 'H_l%d_t%d' % (l, t-1)], merge_mode='concat', concat_axis=-3)
@@ -134,9 +134,11 @@ def initialize_model():
 
 
                 model.add_node(UpSampling2D(), name='Hup_l%d_t%d' % (l, t), input='H_l%d_t%d' % (l, t))
+                if l<n_modules-1:
+                   model.add_node(UpSampling2D(), name='deres1up_l%d_t%d' % (l+1, t), input='deres1_l%d_t%d' % (l+1, t))
 
                 if l<n_modules-1:
-                    model.add_node(Activation('linear'), name='prod_l%d_t%d' % (l, t), inputs=['Hup_l%d_t%d' % (l, t), 'deres1_l%d_t%d' % (l+1, t)], merge_mode='mul')
+                    #model.add_node(Activation('linear'), name='prod_l%d_t%d' % (l, t), inputs=['Hup_l%d_t%d' % (l, t), 'deres1_l%d_t%d' % (l+1, t)], merge_mode='mul')
                     if t == t_predict[0]:
                         shared_l = None
                         tr = True
@@ -144,7 +146,7 @@ def initialize_model():
                         shared_l = model.nodes['comb_l%d_t%d' % (l, t_predict[0])]
                         tr = False
                     layer = Convolution2D(stack_sizes[l], 3, 3, border_mode='same', activation='relu', trainable=tr, shared_layer=shared_l)
-                    model.add_node(layer, name='comb_l%d_t%d' % (l, t), inputs=['Hup_l%d_t%d' % (l, t), 'deres1_l%d_t%d' % (l+1, t), 'prod_l%d_t%d' % (l, t)])
+                    model.add_node(layer, name='comb_l%d_t%d' % (l, t), inputs=['Hup_l%d_t%d' % (l, t), 'deres1up_l%d_t%d' % (l+1, t)], merge_mode='concat', concat_axis=-3)
 
 
                 layer = Convolution2D(stack_sizes[l], 3, 3, border_mode='same', activation='relu', trainable=trainable, shared_layer=shared_layers[0])
@@ -158,7 +160,7 @@ def initialize_model():
                 layer = Convolution2D(stack_sizes[l], 3, 3, border_mode='same', activation='relu', trainable=trainable, shared_layer=shared_layers[3])
                 model.add_node(layer, name=layer_names[3], input=layer_names[2])
 
-                model.add_node(UpSampling2D(), name='deres1_l%d_t%d' % (l, t), inputs=['deres0_l%d_t%d' % (l, t), layer_names[3]], merge_mode='sum')
+                model.add_node(Activation('linear'), name='deres1_l%d_t%d' % (l, t), inputs=['deres0_l%d_t%d' % (l, t), layer_names[3]], merge_mode='sum')
 
                 if l==0:
                     model.add_node(Convolution2D(1, 1, 1), name='output_t%d' % t, input='deres1_l%d_t%d' % (l, t), create_output=True)
@@ -174,38 +176,72 @@ def train():
         loss['output_t%d' % t] = 'mae'
 
     print 'Compiling...'
+    #optimizer = RMSprop(lr=0.0002)
     model.compile(loss=loss, optimizer='adam')
 
     f = h5py.File(data_dir+'train_data.h5', 'r')
     X = f['normed_images']
     y = f['train_membrane_distance']
-    n = data.shape[0] - nt_in
-    n_val = 20
+    X = X[:-n_val][:,:input_size,:input_size]
+    y = y[:-n_val][:,:input_size,:input_size]
+    n = X.shape[0] - nt_in
 
     data = {}
     for t in range(nt_in):
-        data['input_t%d' % t] = np.zeros((n - nt_in - n_val + 1, 1, 1024, 1024)).astype(np.float32)
-        data['input_t%d' % t][:, 0, :-1, :] = X[t:n-nt_in+1-n_val]
-        data['input_t%d' % t][:, 0, -1] = data['input_t%d' % t][:, 0, -2]
+        data['input_t%d' % t] = np.zeros((n - nt_in + 1, 1, input_size, input_size)).astype(np.float32)
+        data['input_t%d' % t][:, 0, :, :] = X[t:t+n-nt_in+1]
+        #data['input_t%d' % t][:, 0, -1] = data['input_t%d' % t][:, 0, -2]
 
     for l in range(n_modules):
-        data['H_l%d_t-1' % l] = np.zeros((n, stack_sizes[l], 1024 // 2**(l+1), 1024 // 2**(l+1)))
-        data['C_l%d_t-1' % l] = np.zeros((n, stack_sizes[l], 1024 // 2**(l+1), 1024 // 2**(l+1)))
+        data['H_l%d_t-1' % l] = np.zeros((n - nt_in + 1, stack_sizes[l], input_size // 2**(l+1), input_size // 2**(l+1)))
+        data['C_l%d_t-1' % l] = np.zeros((n - nt_in + 1, stack_sizes[l], input_size // 2**(l+1), input_size // 2**(l+1)))
 
     for t in t_predict:
-        data['output_t%d' % t] = np.zeros((n - nt_in - n_val + 1, 1, 1024, 1024)).astype(np.float32)
-        data['output_t%d' % t][:, 0, :-1, :] = y[t:n-nt_in+1-n_val]
-        data['output_t%d' % t][:, 0, -1] = data['output_t%d' % t][:, 0, -2]
+        data['output_t%d' % t] = np.zeros((n - nt_in + 1, 1, input_size, input_size)).astype(np.float32)
+        data['output_t%d' % t][:, 0, :, :] = y[t:t+n-nt_in+1]
+        #data['output_t%d' % t][:, 0, -1] = data['output_t%d' % t][:, 0, -2]
 
-    model.fit(inputs, batch_size=batch_size, nb_epoch=nb_epoch)
+    model.fit(data, batch_size=batch_size, nb_epoch=nb_epoch)
 
     return model
+
+
+def evaluate(model):
+    f = h5py.File(data_dir+'train_data.h5', 'r')
+    X = f['normed_images']
+    y = f['train_membrane_distance']
+    X = X[-n_val:][:,:input_size,:input_size]
+    y = y[-n_val:][:,:input_size,:input_size]
+    n = X.shape[0] - nt_in
+    n = X.shape[0] - nt_in
+
+    data = {}
+    for t in range(nt_in):
+        data['input_t%d' % t] = np.zeros((n - nt_in + 1, 1, input_size, input_size)).astype(np.float32)
+        data['input_t%d' % t][:, 0, :, :] = X[t:t+n-nt_in+1]
+        #data['input_t%d' % t][:, 0, -1] = data['input_t%d' % t][:, 0, -2]
+
+    for l in range(n_modules):
+        data['H_l%d_t-1' % l] = np.zeros((n - nt_in + 1, stack_sizes[l], input_size // 2**(l+1), input_size // 2**(l+1)))
+        data['C_l%d_t-1' % l] = np.zeros((n - nt_in + 1, stack_sizes[l], input_size // 2**(l+1), input_size // 2**(l+1)))
+
+    for t in t_predict:
+        data['output_t%d' % t] = np.zeros((n - nt_in + 1, 1, input_size, input_size)).astype(np.float32)
+        data['output_t%d' % t][:, 0, :, :] = y[t:t+n-nt_in+1]
+        #data['output_t%d' % t][:, 0, -1] = data['output_t%d' % t][:, 0, -2]
+
+    vals = model.evaluate(data, batch_size=batch_size)
+    print vals
+
+    vals = model.predict(data, batch_size=batch_size)
+    savemat('predictions.mat', {'yhat': vals['output_t%d' % t_predict[0]], 'y': data['input_t%d' % (nt_in-1)]})
+
 
 
 if __name__=='__main__':
     try:
         model = train()
-        #evaluate(model)
+        evaluate(model)
     except:
         ty, value, tb = sys.exc_info()
         traceback.print_exc()
