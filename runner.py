@@ -56,7 +56,7 @@ class Runner:
                 break
 
         if self.config.callback is not None:
-            self.config.callback(self.config, model, self.data.val_x, val_err, train_err, best_weights, self.logger)
+            self.config.callback(self.config, model, self.data.val_x, self.data.val_y, val_err, train_err, best_weights, self.logger)
 
         self.logger.info("***Finished " + self.config.name)
 

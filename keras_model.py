@@ -5,6 +5,8 @@ from keras.models import *
 from keras.layers.core import *
 from keras.layers.convolutional import *
 
+import numpy as np
+
 class ConvLSTMLadderNet(Graph):
 
     def __init__(self, config, build=True):
@@ -34,18 +36,19 @@ class ConvLSTMLadderNet(Graph):
             data['input_t%d' % t] = X[:,t]
 
         for l in range(self.config.n_modules):
-            data['H_l%d_t-1' % l] = np.zeros((n - self.config.nt_in + 1, self.config.stack_sizes[l], self.config.input_shape[1] // 2**(l+1), self.config.input_shape[2] // 2**(l+1))).astype(np.float32)
+            data['H_l%d_t-1' % l] = np.zeros((n, self.config.stack_sizes[l], self.config.input_shape[1] // 2**(l+1), self.config.input_shape[2] // 2**(l+1))).astype(np.float32)
             data['C_l%d_t-1' % l] = np.copy(data['H_l%d_t-1' % l])
 
         if Y is not None:
-            for t in self.config.t_predict:
-                data['output_t%d' % t] = Y[:,t]
+            for i in range(len(self.config.t_predict)):
+                data['output_t%d' % t] = Y[:,i]
+        return data
 
     def format_predictions(self, data):
         for i,t in enumerate(self.config.t_predict):
             Xt = data['output_t%d' % t]
             if i==0:
-                X = np.zeros( (Xt.shape[0], len(self.config.t_predict) + Xt.shape[1:])).astype(np.float32)
+                X = np.zeros( (Xt.shape[0], len(self.config.t_predict)) + Xt.shape[1:]).astype(np.float32)
             X[:,i] = Xt
         return X
 
@@ -133,31 +136,31 @@ class ConvLSTMLadderNet(Graph):
             if t in self.config.t_predict:
                 for l in range(self.config.n_modules-1, -1, -1):
                     layer_names = ['deconv%d_l%d_t%d' % (i, l, t) for i in range(4)]
-                    if t == t_predict[0]:
+                    if t == self.config.t_predict[0]:
                         trainable = True
                         shared_layers = [None for _ in range(4)]
                     else:
                         trainable = False
-                        shared_layers = [self.nodes['deconv%d_l%d_t%d' % (i, l, t_predict[0])] for i in range(4)]
+                        shared_layers = [self.nodes['deconv%d_l%d_t%d' % (i, l, self.config.t_predict[0])] for i in range(4)]
 
 
-                    if l==n_modules-1:
+                    if l==self.config.n_modules-1:
                         module_input = 'Hup_l%d_t%d' % (l, t)
                     else:
                         module_input = 'comb_l%d_t%d' % (l, t)
 
 
                     self.add_node(UpSampling2D(), name='Hup_l%d_t%d' % (l, t), input='H_l%d_t%d' % (l, t))
-                    if l<n_modules-1:
+                    if l<self.config.n_modules-1:
                        self.add_node(UpSampling2D(), name='deres1up_l%d_t%d' % (l+1, t), input='deres1_l%d_t%d' % (l+1, t))
 
-                    if l<n_modules-1:
+                    if l<self.config.n_modules-1:
                         #self.add_node(Activation('linear'), name='prod_l%d_t%d' % (l, t), inputs=['Hup_l%d_t%d' % (l, t), 'deres1_l%d_t%d' % (l+1, t)], merge_mode='mul')
-                        if t == t_predict[0]:
+                        if t == self.config.t_predict[0]:
                             shared_l = None
                             tr = True
                         else:
-                            shared_l = self.nodes['comb_l%d_t%d' % (l, t_predict[0])]
+                            shared_l = self.nodes['comb_l%d_t%d' % (l, self.config.t_predict[0])]
                             tr = False
                         layer = Convolution2D(self.config.stack_sizes[l], 3, 3, border_mode='same', activation='relu', trainable=tr, shared_layer=shared_l)
                         self.add_node(layer, name='comb_l%d_t%d' % (l, t), inputs=['Hup_l%d_t%d' % (l, t), 'deres1up_l%d_t%d' % (l+1, t)], merge_mode='concat', concat_axis=-3)

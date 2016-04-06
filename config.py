@@ -2,6 +2,9 @@ import sys
 sys.path.append('../')
 from mypyutils.basic import get_next_num
 from consts import *
+from callback import *
+from keras_model import *
+from data import *
 
 class Config(object):
     def __init__(self, param_overrides=None):
@@ -14,21 +17,30 @@ class Config(object):
         self.t_predict = [4]
         self.loss_weights = [1.0]
         self.loss = 'mae'
+        self.optimizer = 'adam'
         self.nt_in = 5
         self.n_modules = 2
         self.stack_sizes = {-1: 1, 0: 16, 1: 32}
 
-        self.max_epochs = 100
-        self.batch_size = 4
-        self.config.patience = 50
+        self.max_epochs = 20
+        self.batch_size = 6
+        self.patience = 50
 
         self.input_shape = (1, 256, 256)
         self.n_val = 20
+        self.n_plot = 5
 
         self.epoch_callback = None
         self.epoch_callback_params = None
 
-        self.callback =
+        self.save_last_weights = False
+        self.save_best_weights = False
+        self.save_predictions = True
+
+        self.callback = basic_callback
+        self.model = ConvLSTMLadderNet
+        self.data = ConnectomicsFromRay
+        self.data_dir = '/home/thouis/ForBill/'
 
     def __str__(self):
         return self.__dict__.__str__()
