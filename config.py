@@ -22,7 +22,7 @@ class Config(object):
         self.n_modules = 2
         self.stack_sizes = {-1: 1, 0: 16, 1: 32}
 
-        self.max_epochs = 20
+        self.max_epochs = 500
         self.batch_size = 6
         self.patience = 50
 
