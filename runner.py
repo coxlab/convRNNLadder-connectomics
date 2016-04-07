@@ -21,7 +21,8 @@ class Runner:
         self.logger.info("Building model...")
         model = self.config.model(self.config)
 
-        train_data = model.format_data(self.data.train_x, self.data.train_y)
+        if not self.config.use_batch_iterator:
+            train_data = model.format_data(self.data.train_x, self.data.train_y)
         val_data = model.format_data(self.data.val_x, self.data.val_y)
 
         best_val_err = np.inf
@@ -32,6 +33,8 @@ class Runner:
         train_err = np.zeros(self.config.max_epochs)
         self.logger.info("Training...")
         for i in range(self.config.max_epochs):
+            if self.config.use_batch_iterator:
+                train_data = model.format_data(*self.data.batch_iterator(epoch))
             info = model.fit(train_data, validation_data=val_data, batch_size=self.config.batch_size, nb_epoch=1)
             train_err[i] = info.history['loss'][0]
             val_err[i] = info.history['val_loss'][0]

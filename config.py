@@ -22,8 +22,10 @@ class Config(object):
         self.n_modules = 2
         self.stack_sizes = {-1: 1, 0: 16, 1: 32}
 
-        self.max_epochs = 500
+        self.max_epochs = 50
         self.batch_size = 6
+        self.epoch_size = 400
+        self.use_batch_iterator = True
         self.patience = 50
 
         self.input_shape = (1, 256, 256)

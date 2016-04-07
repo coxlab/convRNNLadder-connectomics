@@ -13,6 +13,10 @@ class ConnectomicsFromRay:
     def train(self):
         return (self.train_x, self.train_y)
 
+    def batch_iterator(self, epoch):
+        idx = np.random.permutation(self.train_x.shape[0])[:self.config.epoch_size]
+        return (self.train_x[idx], self.train_y[idx])
+
     def load_data(self):
         f = h5py.File(self.config.data_dir+'train_data.h5', 'r')
         X = f['normed_images']
