@@ -41,7 +41,10 @@ class ConvLSTMLadderNet(Graph):
 
         if Y is not None:
             for i in range(len(self.config.t_predict)):
-                data['output_t%d' % t] = Y[:,i]
+                if len(Y.shape) == 5:
+                    data['output_t%d' % t] = Y[:,i]
+                else:
+                    data['output_t%d' % t] = Y
         return data
 
     def format_predictions(self, data):

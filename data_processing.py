@@ -5,7 +5,7 @@ import h5py
 import hickle as hkl
 import pickle as pkl
 
-def create_training_set():
+def create_dataset():
     P = {}
     P['version'] = 0
     P['nt_in'] = 5
@@ -16,9 +16,11 @@ def create_training_set():
     f = h5py.File(P['orig_file'], 'r')
     X_orig = f['normed_images']
     Y_orig = f['train_membrane_distance']
+    M_orig = f['membranes']
 
     X = np.zeros((P['n_examples'], P['nt_in'], 1) + P['shape']).astype(np.float32)
     Y = np.zeros((P['n_examples'], 1) + P['shape']).astype(np.float32)
+    M = np.zeros((P['n_examples'], 1) + P['shape']).astype(np.float32)
 
     n = X_orig.shape[0]
     ny = X_orig.shape[1]
@@ -47,6 +49,13 @@ def create_training_set():
                 if flip:
                     Y_base = np.fliplr(Y_base)
                 Y[count, 0] = rotate(Y_base, theta, mode='reflect')[shift_y:shift_y+P['shape'][0], shift_x:shift_x+P['shape'][1]]
+                M_base = M_orig[idx+t]
+                if flip:
+                    M_base = np.fliplr(M_base)
+                M_rot = rotate(M_base, theta, mode='reflect')
+                #M_rot[M_rot < 127] = 0.
+                #M_rot[M_rot >= 127] = 1.
+                M[count, 0] = M_rot[shift_y:shift_y+P['shape'][0], shift_x:shift_x+P['shape'][1]]
         count += 1
         print count
 
@@ -55,11 +64,12 @@ def create_training_set():
         os.mkdir(out_dir)
     hkl.dump(X, open(out_dir + 'X.hkl','w'))
     hkl.dump(Y, open(out_dir + 'Y.hkl','w'))
+    hkl.dump(Y, open(out_dir + 'M.hkl','w'))
     pkl.dump(P, open(out_dir + 'P.pkl','w'))
 
 if __name__ == "__main__":
     try:
-        create_training_set()
+        create_dataset()
     except:
         ty, value, tb = sys.exc_info()
         traceback.print_exc()

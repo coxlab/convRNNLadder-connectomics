@@ -19,11 +19,11 @@ class Config(object):
         self.loss = 'mae'
         self.optimizer = 'adam'
         self.nt_in = 5
-        self.n_modules = 2
-        self.stack_sizes = {-1: 1, 0: 16, 1: 32}
+        self.n_modules = 3
+        self.stack_sizes = {-1: 1, 0: 16, 1: 32, 2: 64}
 
-        self.max_epochs = 50
-        self.batch_size = 6
+        self.max_epochs = 200
+        self.batch_size = 3
         self.epoch_size = 400
         self.use_batch_iterator = True
         self.patience = 50
@@ -41,8 +41,10 @@ class Config(object):
 
         self.callback = basic_callback
         self.model = ConvLSTMLadderNet
-        self.data = ConnectomicsFromRay
-        self.data_dir = '/home/thouis/ForBill/'
+        self.data = PreprocessedConnectomics
+        self.train_data_dir = nas_dir + 'bill/convRNNLadder-connectomics/data/version_0/'
+        self.val_data_dir = nas_dir + 'bill/convRNNLadder-connectomics/data/version_1/'
+        self.test_data_dir = nas_dir + 'bill/convRNNLadder-connectomics/data/version_1/'
 
     def __str__(self):
         return self.__dict__.__str__()

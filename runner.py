@@ -34,7 +34,7 @@ class Runner:
         self.logger.info("Training...")
         for i in range(self.config.max_epochs):
             if self.config.use_batch_iterator:
-                train_data = model.format_data(*self.data.batch_iterator(epoch))
+                train_data = model.format_data(*self.data.batch_iterator(i))
             info = model.fit(train_data, validation_data=val_data, batch_size=self.config.batch_size, nb_epoch=1)
             train_err[i] = info.history['loss'][0]
             val_err[i] = info.history['val_loss'][0]
@@ -59,7 +59,7 @@ class Runner:
                 break
 
         if self.config.callback is not None:
-            self.config.callback(self.config, model, self.data.val_x, self.data.val_y, val_err, train_err, best_weights, self.logger)
+            self.config.callback(self.config, model, self.data.test_x, self.data.test_y, val_err, train_err, best_weights, self.logger)
 
         self.logger.info("***Finished " + self.config.name)
 

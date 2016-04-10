@@ -1,6 +1,7 @@
 import logging
 import h5py, pdb
 import numpy as np
+import hickle as hkl
 
 class ConnectomicsFromRay:
     def __init__(self, config):
@@ -41,3 +42,31 @@ class ConnectomicsFromRay:
             data[:, i, 0] = raw_data[t:(t + raw_data.shape[0] - self.config.nt_in + 1)]
 
         return data
+
+class PreprocessedConnectomics:
+    def __init__(self, config):
+        self.config = config
+        self.load_data()
+
+    def val(self):
+        return (self.val_x, self.val_y)
+
+    def train(self):
+        return (self.train_x, self.train_y)
+
+    def batch_iterator(self, epoch):
+        idx = np.random.permutation(self.train_x.shape[0])[:self.config.epoch_size]
+        return (self.train_x[idx], self.train_y[idx])
+
+    def load_data(self):
+        self.train_x = hkl.load(open(self.config.train_data_dir + 'X.hkl'))
+        self.train_y = hkl.load(open(self.config.train_data_dir + 'Y.hkl'))
+        self.val_x = hkl.load(open(self.config.val_data_dir + 'X.hkl'))[:40]
+        self.val_y = hkl.load(open(self.config.val_data_dir + 'Y.hkl'))[:40]
+        self.test_x = hkl.load(open(self.config.test_data_dir + 'X.hkl'))[40:80]
+        self.test_y = hkl.load(open(self.config.test_data_dir + 'Y.hkl'))[40:80]
+
+        # to be compatible with other stuff
+        self.train_y = self.train_y.reshape( (self.train_y.shape[0], 1) + self.train_y.shape[1:])
+        self.val_y = self.val_y.reshape( (self.val_y.shape[0], 1) + self.val_y.shape[1:])
+        self.test_y = self.test_y.reshape( (self.test_y.shape[0], 1) + self.test_y.shape[1:])
