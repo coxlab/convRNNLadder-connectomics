@@ -64,7 +64,7 @@ def create_dataset():
         os.mkdir(out_dir)
     hkl.dump(X, open(out_dir + 'X.hkl','w'))
     hkl.dump(Y, open(out_dir + 'Y.hkl','w'))
-    hkl.dump(Y, open(out_dir + 'M.hkl','w'))
+    hkl.dump(M, open(out_dir + 'M.hkl','w'))
     pkl.dump(P, open(out_dir + 'P.pkl','w'))
 
 if __name__ == "__main__":

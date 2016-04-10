@@ -16,13 +16,13 @@ class Config(object):
 
         self.t_predict = [4]
         self.loss_weights = [1.0]
-        self.loss = 'mae'
+        self.loss = 'bce' #'mae'
         self.optimizer = 'adam'
         self.nt_in = 5
         self.n_modules = 3
         self.stack_sizes = {-1: 1, 0: 16, 1: 32, 2: 64}
 
-        self.max_epochs = 200
+        self.max_epochs = 1
         self.batch_size = 3
         self.epoch_size = 400
         self.use_batch_iterator = True
@@ -45,6 +45,7 @@ class Config(object):
         self.train_data_dir = nas_dir + 'bill/convRNNLadder-connectomics/data/version_0/'
         self.val_data_dir = nas_dir + 'bill/convRNNLadder-connectomics/data/version_1/'
         self.test_data_dir = nas_dir + 'bill/convRNNLadder-connectomics/data/version_1/'
+        self.predict_var = 'membrane' # or distance
 
     def __str__(self):
         return self.__dict__.__str__()

@@ -46,6 +46,7 @@ class ConnectomicsFromRay:
 class PreprocessedConnectomics:
     def __init__(self, config):
         self.config = config
+        self.output_map = {'distance': 'Y', 'membrane': 'M'}
         self.load_data()
 
     def val(self):
@@ -60,13 +61,21 @@ class PreprocessedConnectomics:
 
     def load_data(self):
         self.train_x = hkl.load(open(self.config.train_data_dir + 'X.hkl'))
-        self.train_y = hkl.load(open(self.config.train_data_dir + 'Y.hkl'))
         self.val_x = hkl.load(open(self.config.val_data_dir + 'X.hkl'))[:40]
-        self.val_y = hkl.load(open(self.config.val_data_dir + 'Y.hkl'))[:40]
         self.test_x = hkl.load(open(self.config.test_data_dir + 'X.hkl'))[40:80]
-        self.test_y = hkl.load(open(self.config.test_data_dir + 'Y.hkl'))[40:80]
+
+        tag = self.output_map[self.config.predict_var]
+        self.train_y = self.process(hkl.load(open(self.config.train_data_dir + tag + '.hkl')), tag)
+        pdb.set_trace()
+        self.val_y = self.process(hkl.load(open(self.config.val_data_dir + tag + '.hkl'))[:40], tag)
+        self.test_y = self.process(hkl.load(open(self.config.test_data_dir + tag + '.hkl'))[40:80], tag)
 
         # to be compatible with other stuff
         self.train_y = self.train_y.reshape( (self.train_y.shape[0], 1) + self.train_y.shape[1:])
         self.val_y = self.val_y.reshape( (self.val_y.shape[0], 1) + self.val_y.shape[1:])
         self.test_y = self.test_y.reshape( (self.test_y.shape[0], 1) + self.test_y.shape[1:])
+
+    def process(self, data, tag):
+        if tag == 'M':
+            data = data[:].astype(np.float32) / 255.
+        return data
