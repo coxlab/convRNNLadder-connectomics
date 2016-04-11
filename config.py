@@ -47,6 +47,10 @@ class Config(object):
         self.test_data_dir = nas_dir + 'bill/convRNNLadder-connectomics/data/version_1/'
         self.predict_var = 'distance' # membrane or distance
 
+        if param_overrides is not None:
+            for param in param_overrides:
+                setattr(self, param, param_overrides[param])
+
     def __str__(self):
         return self.__dict__.__str__()
 
