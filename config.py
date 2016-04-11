@@ -1,5 +1,5 @@
 import sys
-sys.path.append('../')
+sys.path.append('/home/bill/git_repos/')
 from mypyutils.basic import get_next_num
 from consts import *
 from callback import *
@@ -16,13 +16,13 @@ class Config(object):
 
         self.t_predict = [4]
         self.loss_weights = [1.0]
-        self.loss = 'bce' #'mae'
+        self.loss = 'binary_crossentropy' #'mae'
         self.optimizer = 'adam'
         self.nt_in = 5
-        self.n_modules = 3
-        self.stack_sizes = {-1: 1, 0: 16, 1: 32, 2: 64}
+        self.n_modules = 2
+        self.stack_sizes = {-1: 1, 0: 32, 1: 64, 2: 64}
 
-        self.max_epochs = 1
+        self.max_epochs = 300
         self.batch_size = 3
         self.epoch_size = 400
         self.use_batch_iterator = True
@@ -35,8 +35,8 @@ class Config(object):
         self.epoch_callback = None
         self.epoch_callback_params = None
 
-        self.save_last_weights = False
-        self.save_best_weights = False
+        self.save_last_weights = True
+        self.save_best_weights = True
         self.save_predictions = True
 
         self.callback = basic_callback

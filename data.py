@@ -66,7 +66,6 @@ class PreprocessedConnectomics:
 
         tag = self.output_map[self.config.predict_var]
         self.train_y = self.process(hkl.load(open(self.config.train_data_dir + tag + '.hkl')), tag)
-        pdb.set_trace()
         self.val_y = self.process(hkl.load(open(self.config.val_data_dir + tag + '.hkl'))[:40], tag)
         self.test_y = self.process(hkl.load(open(self.config.test_data_dir + tag + '.hkl'))[40:80], tag)
 
