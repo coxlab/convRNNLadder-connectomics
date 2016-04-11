@@ -183,4 +183,8 @@ class ConvLSTMLadderNet(Graph):
                     self.add_node(Activation('linear'), name='deres1_l%d_t%d' % (l, t), inputs=['deres0_l%d_t%d' % (l, t), layer_names[3]], merge_mode='sum')
 
                     if l==0:
-                        self.add_node(Convolution2D(1, 1, 1), name='output_t%d' % t, input='deres1_l%d_t%d' % (l, t), create_output=True)
+                        if self.config.predict_var == 'membrane':
+                            self.add_node(Convolution2D(1, 1, 1), name='output_conv_t%d' % t, input='deres1_l%d_t%d' % (l, t))
+                            self.add_node(Activation('sigmoid'), name='output_t%d' % t, input='output_conv_t%d' % t, create_output=True)
+                        else:
+                            self.add_node(Convolution2D(1, 1, 1), name='output_t%d' % t, input='deres1_l%d_t%d' % (l, t), create_output=True)
