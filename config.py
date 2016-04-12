@@ -16,13 +16,13 @@ class Config(object):
 
         self.t_predict = [4]
         self.loss_weights = [1.0]
-        self.loss = 'masked_L1' #'mae'
+        self.loss = 'mae' #'mae'
         self.optimizer = 'adam'
         self.nt_in = 5
         self.n_modules = 3
         self.stack_sizes = {-1: 1, 0: 16, 1: 32, 2: 64}
 
-        self.max_epochs = 100
+        self.max_epochs = 200
         self.batch_size = 3
         self.epoch_size = 400
         self.use_batch_iterator = True
