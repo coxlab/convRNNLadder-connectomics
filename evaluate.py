@@ -89,15 +89,39 @@ def create_gt():
     M = M.reshape(M.shape + (1,))
     hkl.dump(M, open(nas_dir + 'bill/convRNNLadder-connectomics/data/test_membranes_t5.h5', 'w'))
 
+def resave_predictions_nt5(run):
+    Y_hat = hkl.load(open(get_run_dir(run) + 'full_test_predictions.h5'))
+    hkl.dump(Y_hat[-71:], open(get_run_dir(run) + 'full_test_predictions_nt5.h5', 'w'))
+
+def evaluate_pixel_classification(run_num):
+    f = get_run_dir(run_num) + 'full_test_predictions.h5'
+    Y_hat = hkl.load(open(f))
+    Y_hat = Y_hat.reshape(Y_hat.shape[:-1])
+    M_hat = np.copy(Y_hat)
+    M_hat[M_hat>=0.5] = 1
+    M_hat[M_hat<0.5] = 0
+
+    data_file = '/home/thouis/ForBill/test_data.h5'
+    f = h5py.File(data_file, 'r')
+    M = f['membranes'][4:,:,:]
+
+    print str(run_num) +': ' +str(1-np.mean(M==M_hat))
+
 
 
 if __name__ == "__main__":
     try:
-        data_file = '/home/thouis/ForBill/test_data.h5'
-        out_name = 'full_test_predictions.h5'
-        create_predictions_from_run(47, data_file, out_name)
+        #data_file = '/home/thouis/ForBill/test_data.h5'
+        #out_name = 'full_test_predictions.h5'
+        #create_predictions_from_run(56, data_file, out_name)
+
+        for r in [53, 54, 55, 56]:
+            resave_predictions_nt5(r)
 
         #resave_predictions([35, 48, 46, 49])
+
+        #for r in [35,48,46,49]:
+        #    evaluate_pixel_classification(r)
     except:
 		ty, value, tb = sys.exc_info()
 		traceback.print_exc()

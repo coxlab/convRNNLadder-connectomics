@@ -34,12 +34,15 @@ def basic_callback(config, model, test_x, test_y, val_err, train_err, best_weigh
         pkl.dump({'Y': test_y[:config.n_plot], 'Yhat': test_yhat[:config.n_plot]}, open(os.path.join(config.save_dir, 'predictions.pkl'), 'w'))
         savemat(os.path.join(config.save_dir, 'predictions.mat'), {'Y': test_yhat[:config.n_plot], 'Yhat': test_y[:config.n_plot]})
 
-    save_names = [pred_dir + 'sample_' + str(i) + '_distance.jpg' for i in range(config.n_plot)]
-    titles = ['sample ' + str(i) + ' ' + config.name for i in range(config.n_plot)]
     if config.predict_var=='membrane':
         cmap = 'Greys_r'
+        tag = 'membrane'
     else:
         cmap = 'jet'
+        tag = 'distance'
+    save_names = [pred_dir + 'sample_' + str(i) + '_' + tag + '.jpg' for i in range(config.n_plot)]
+    titles = ['sample ' + str(i) + ' ' + config.name for i in range(config.n_plot)]
+
     compare_images(test_y[:config.n_plot], test_yhat[:config.n_plot], save_names, titles, cmap=cmap)
 
     if config.predict_var=='distance':

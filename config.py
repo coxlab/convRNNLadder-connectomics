@@ -14,11 +14,11 @@ class Config(object):
         self.data_folder = os.path.join(os.getenv('HOME'), 'Data/FaceGen_Rotations/clipset4/')
         self.save_dir = os.path.join(base_run_dir, self.name + '/')
 
-        self.t_predict = [4]
+        self.t_predict = [0]
         self.loss_weights = [1.0]
         self.loss = 'mae' #'mae'
         self.optimizer = 'adam'
-        self.nt_in = 5
+        self.nt_in = 1
         self.n_modules = 3
         self.stack_sizes = {-1: 1, 0: 16, 1: 32, 2: 64}
 

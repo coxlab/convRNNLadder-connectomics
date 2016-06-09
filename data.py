@@ -2,6 +2,7 @@ import logging
 import h5py, pdb
 import numpy as np
 import hickle as hkl
+import pdb
 
 class ConnectomicsFromRay:
     def __init__(self, config):
@@ -60,9 +61,9 @@ class PreprocessedConnectomics:
         return (self.train_x[idx], self.train_y[idx])
 
     def load_data(self):
-        self.train_x = hkl.load(open(self.config.train_data_dir + 'X.hkl'))
-        self.val_x = hkl.load(open(self.config.val_data_dir + 'X.hkl'))[:40]
-        self.test_x = hkl.load(open(self.config.test_data_dir + 'X.hkl'))[40:80]
+        self.train_x = hkl.load(open(self.config.train_data_dir + 'X.hkl'))[:,-self.config.nt_in:]
+        self.val_x = hkl.load(open(self.config.val_data_dir + 'X.hkl'))[:40,-self.config.nt_in:]
+        self.test_x = hkl.load(open(self.config.test_data_dir + 'X.hkl'))[40:80,-self.config.nt_in:]
 
         tag = self.output_map[self.config.predict_var]
         self.train_y = self.process(hkl.load(open(self.config.train_data_dir + tag + '.hkl')), tag)
