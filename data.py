@@ -77,5 +77,5 @@ class PreprocessedConnectomics:
 
     def process(self, data, tag):
        # if tag == 'M':
-            data = data[:].astype(np.float32) / 255.
+        data = data[:].astype(np.float32) / 255.
         return data
