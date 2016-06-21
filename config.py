@@ -35,17 +35,17 @@ class Config(object):
         self.epoch_callback = None
         self.epoch_callback_params = None
 
-        self.save_last_weights = False
-        self.save_best_weights = False
+        self.save_last_weights = True
+        self.save_best_weights = True
         self.save_predictions = True
 
         self.callback = basic_callback
         self.model = ConvLSTMLadderNet
         self.data = PreprocessedConnectomics
-        self.train_data_dir = nas_dir + 'bill/project_data/convRNNLadder-connectomics/data/version_0/'
-        self.val_data_dir = nas_dir + 'bill/project_data/convRNNLadder-connectomics/data/version_1/'
-        self.test_data_dir = nas_dir + 'bill/project_data/convRNNLadder-connectomics/data/version_1/'
-        self.predict_var = 'distance' # membrane or distance
+        self.train_data_dir = '/n/coxfs01/mat/data/version_0/'
+        self.val_data_dir = '/n/coxfs01/emily/data/version_1/'
+        self.test_data_dir = '/n/coxfs01/emily/data/version_1/'
+        self.predict_var = 'membrane' # membrane or distance
 
         if param_overrides is not None:
             for param in param_overrides:

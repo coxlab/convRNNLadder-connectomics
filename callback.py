@@ -2,13 +2,16 @@ import sys, os
 import pickle as pkl
 from scipy.io import savemat
 sys.path.append('../')
+import matplotlib
+matplotlib.use('Agg')
 from mypyutils.plotting import plot_training_error, compare_images
+
 
 def basic_callback(config, model, test_x, test_y, val_err, train_err, best_weights, logger):
     if not os.path.exists(config.save_dir):
         os.mkdir(config.save_dir)
 
-    plot_training_error(train_err, val_err, run_name = config.name, out_file = os.path.join(config.save_dir, 'error_plot.jpg'))
+    plot_training_error(train_err, val_err, run_name = config.name, out_file = os.path.join(config.save_dir, 'error_plot.png'))
 
     if config.save_last_weights:
         model.save_weights(os.path.join(config.save_dir, 'model_weights_last.hdf5'))
@@ -40,14 +43,14 @@ def basic_callback(config, model, test_x, test_y, val_err, train_err, best_weigh
     else:
         cmap = 'jet'
         tag = 'distance'
-    save_names = [pred_dir + 'sample_' + str(i) + '_' + tag + '.jpg' for i in range(config.n_plot)]
+    save_names = [pred_dir + 'sample_' + str(i) + '_' + tag + '.png' for i in range(config.n_plot)]
     titles = ['sample ' + str(i) + ' ' + config.name for i in range(config.n_plot)]
 
     compare_images(test_y[:config.n_plot], test_yhat[:config.n_plot], save_names, titles, cmap=cmap)
 
     if config.predict_var=='distance':
         #make boundary maps
-        save_names = [pred_dir + 'sample_' + str(i) + '_boundary.jpg' for i in range(config.n_plot)]
+        save_names = [pred_dir + 'sample_' + str(i) + '_boundary.png' for i in range(config.n_plot)]
         y_plot = test_y[:config.n_plot]
         yhat_plot = test_yhat[:config.n_plot]
         y_plot[y_plot>10] = 10

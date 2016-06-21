@@ -4,6 +4,6 @@ if os.path.exists('/media/nas/'):
     nas_dir = '/media/nas/'
 else:
     nas_dir = '/n/coxfs01/'
-base_run_dir = '/n/home09/emilyw/runs/'
+base_run_dir = '/n/coxfs01/emily/runs/'
 
-results_dir = '/n/home09/emilyw/results/'
+results_dir = '/n/coxfs01/emily/results/'
