@@ -61,9 +61,9 @@ class PreprocessedConnectomics:
         return (self.train_x[idx], self.train_y[idx])
 
     def load_data(self):
-        self.train_x = hkl.load(open(self.config.train_data_dir + 'X.hkl'))[:,-self.config.nt_in:]
-        self.val_x = hkl.load(open(self.config.val_data_dir + 'X.hkl'))[:40,-self.config.nt_in:]
-        self.test_x = hkl.load(open(self.config.test_data_dir + 'X.hkl'))[40:80,-self.config.nt_in:]
+        self.train_x = self.process(hkl.load(open(self.config.train_data_dir + 'X.hkl'))[:,-self.config.nt_in:], 'tag')
+        self.val_x = self.process(hkl.load(open(self.config.val_data_dir + 'X.hkl'))[:40,-self.config.nt_in:], 'tag')
+        self.test_x = self.process(hkl.load(open(self.config.test_data_dir + 'X.hkl'))[40:80,-self.config.nt_in:], 'tag')
 
         tag = self.output_map[self.config.predict_var]
         self.train_y = self.process(hkl.load(open(self.config.train_data_dir + tag + '.hkl')), tag)
@@ -76,6 +76,6 @@ class PreprocessedConnectomics:
         self.test_y = self.test_y.reshape( (self.test_y.shape[0], 1) + self.test_y.shape[1:])
 
     def process(self, data, tag):
-        if tag == 'M':
+       # if tag == 'M':
             data = data[:].astype(np.float32) / 255.
         return data
